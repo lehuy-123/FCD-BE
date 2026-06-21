@@ -3,10 +3,32 @@ const Product = require('../models/Product');
 // GET /api/products
 const getProducts = async (req, res) => {
     try {
-        const products = await Product.find({});
-        res.json(products);
+        const pageSize = Number(req.query.pageSize) || 8;
+        const page = Number(req.query.pageNumber) || 1;
+
+        const keyword = req.query.keyword ? {
+            name: {
+                $regex: req.query.keyword,
+                $options: 'i'
+            }
+        } : {};
+
+        const category = req.query.category ? { category: req.query.category } : {};
+
+        const count = await Product.countDocuments({ ...keyword, ...category });
+        const products = await Product.find({ ...keyword, ...category })
+            .limit(pageSize)
+            .skip(pageSize * (page - 1))
+            .sort({ createdAt: -1 });
+
+        res.json({
+            products,
+            page,
+            pages: Math.ceil(count / pageSize),
+            total: count
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Lỗi khi truy xuất danh sách sản phẩm", detail: error.message });
     }
 };
 

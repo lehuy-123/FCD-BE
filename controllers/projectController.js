@@ -3,10 +3,32 @@ const Project = require('../models/Project');
 // Get all projects
 exports.getProjects = async (req, res) => {
     try {
-        const projects = await Project.find().sort({ createdAt: -1 });
-        res.status(200).json(projects);
+        const pageSize = Number(req.query.pageSize) || 6;
+        const page = Number(req.query.pageNumber) || 1;
+
+        const keyword = req.query.keyword ? {
+            title: {
+                $regex: req.query.keyword,
+                $options: 'i'
+            }
+        } : {};
+
+        const category = req.query.category ? { category: req.query.category } : {};
+
+        const count = await Project.countDocuments({ ...keyword, ...category });
+        const projects = await Project.find({ ...keyword, ...category })
+            .limit(pageSize)
+            .skip(pageSize * (page - 1))
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            projects,
+            page,
+            pages: Math.ceil(count / pageSize),
+            total: count
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({ message: "Lỗi hệ thống khi tải danh sách dự án", detail: err.message });
     }
 };
 
