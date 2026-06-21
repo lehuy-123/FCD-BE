@@ -17,12 +17,14 @@ const getProducts = async (req, res) => {
 
         const count = await Product.countDocuments({ ...keyword, ...category });
         const products = await Product.find({ ...keyword, ...category })
+            .select('-description -specs') // Don't load heavy fields for list view
             .limit(pageSize)
             .skip(pageSize * (page - 1))
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean(); // Return plain JS objects (faster)
 
         res.json({
-            products,
+            products: products.map(p => ({ ...p, id: p._id })), // Ensure 'id' exists even with .lean()
             page,
             pages: Math.ceil(count / pageSize),
             total: count

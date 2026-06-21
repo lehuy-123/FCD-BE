@@ -17,12 +17,14 @@ exports.getProjects = async (req, res) => {
 
         const count = await Project.countDocuments({ ...keyword, ...category });
         const projects = await Project.find({ ...keyword, ...category })
+            .select('-description') // Exclude heavy description from list
             .limit(pageSize)
             .skip(pageSize * (page - 1))
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean();
 
         res.status(200).json({
-            projects,
+            projects: projects.map(p => ({ ...p, id: p._id })),
             page,
             pages: Math.ceil(count / pageSize),
             total: count
